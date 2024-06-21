@@ -1,4 +1,4 @@
-package task_person_utility.task_person_server; 
+package task_person_utility.task_person_server;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -35,14 +35,19 @@ import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 @Service
 public class PersonServices  {
 
+    private final DBUtil dbutil;
     private final MongoDatabase personTaskDataBase;
     private final MongoCollection<Person> personsDB;
     private final AssignTasksServices assignTasksServices;
     private final Logger logger;
 
     @Autowired
+    private PersonRepository personRepository;
+
+    @Autowired
     public PersonServices(DBUtil dbutil, AssignTasksServices assignTasksServices){
-        personTaskDataBase=dbutil.getPersonTaskDataBase();
+        this.dbutil=dbutil;
+        personTaskDataBase=this.dbutil.getPersonTaskDataBase();
         this.assignTasksServices=assignTasksServices;
         personsDB = personTaskDataBase.getCollection("persons", Person.class);
         logger = Logger.getLogger(PersonServices.class.getName());
@@ -87,15 +92,11 @@ public class PersonServices  {
             System.exit(1);
         }
 
+        dbutil.closeAndOpenDB();
         return persons;
     }
 
     public Person getPerson(String name) {
-
-        // We can also find a single document. Let's find the first document
-        // that has the string "potato" in the ingredients list. We
-        // use the Filters.eq() method to search for any values in any
-        // ingredients list that match the string "potato":
 
         Bson findName = Filters.eq("name", name);
         Person findNamePerson = null;
@@ -107,6 +108,7 @@ public class PersonServices  {
                 }
                 System.exit(1);
             }
+            dbutil.closeAndOpenDB();
             return findNamePerson;
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
@@ -123,22 +125,11 @@ public class PersonServices  {
         Person personToUpdate = getPerson( name);
 
         Bson findName = Filters.eq("name", name);
-        /*      *** UPDATE A DOCUMENT ***
-         *
-         * You can update a single document or multiple documents in a single call.
-         *
-         * Here we update the PrepTimeInMinutes value on the document we
-         * just found.
-         */
+
         Bson updateFilter = Updates.set("name", person.getName());
 
-        // The following FindOneAndUpdateOptions specify that we want it to return
-        // the *updated* document to us. By default, we get the document as it was *before*
-        // the update.
         FindOneAndUpdateOptions options = new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER);
 
-        // The updatedDocument object is a person object that reflects the
-        // changes we just made.
         try {
             Person updatedDocument = personsDB.findOneAndUpdate(findName,
                     updateFilter, options);
@@ -164,14 +155,6 @@ public class PersonServices  {
 
         Person personToDelete = getPerson( name);
 
-        /*      *** DELETE DOCUMENTS ***
-         *
-         *      As with other CRUD methods, you can delete a single document
-         *      or all documents that match a specified filter. To delete all
-         *      of the documents in a collection, pass an empty filter to
-         *      the deleteMany() method. In this example, we'll delete 2 of
-         *      the persons.
-         */
         Bson deleteFilter = Filters.eq("name", name);
         try {
             DeleteResult deleteResult = personsDB

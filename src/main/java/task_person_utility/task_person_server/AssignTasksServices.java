@@ -19,6 +19,7 @@ import java.util.logging.Logger;
 @Service
 public class AssignTasksServices {
 
+    private final DBUtil dbutil;
     private final MongoDatabase personTaskDataBase;
     private final MongoCollection<Task> tasksDB;
     private final MongoCollection<Person> personsDB ;
@@ -26,7 +27,8 @@ public class AssignTasksServices {
 
     @Autowired
     public AssignTasksServices(DBUtil dbutil){
-        personTaskDataBase=dbutil.getPersonTaskDataBase();
+        this.dbutil = dbutil;
+        personTaskDataBase=this.dbutil.getPersonTaskDataBase();
         tasksDB = personTaskDataBase.getCollection("tasks", Task.class);
         personsDB = personTaskDataBase.getCollection("persons", Person.class);
         logger = Logger.getLogger(AssignTasksServices.class.getName());
@@ -36,13 +38,16 @@ public class AssignTasksServices {
         return logger;
     }
 
-    public void assignTasks() {
+    public boolean assignTasks() {
         List<Person> availablePersons = getAvailablePersons();
         List<Task> notDoneTasks = getNotDoneTasks();
 
         if (!availablePersons.isEmpty() && !notDoneTasks.isEmpty()) {
             distributeTasks(availablePersons, notDoneTasks);
+            dbutil.closeAndOpenDB();
+            return true;
         }
+        return false;
     }
 
     private List<Person> getAvailablePersons() {

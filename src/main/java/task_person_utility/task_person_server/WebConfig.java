@@ -1,4 +1,4 @@
-package task_person_utility.task_person_server; 
+package task_person_utility.task_person_server;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

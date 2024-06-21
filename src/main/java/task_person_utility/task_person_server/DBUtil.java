@@ -20,12 +20,22 @@ import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 @Service
 public class DBUtil {
 
-    private final MongoDatabase personTaskDataBase;
+    private MongoDatabase personTaskDataBase;
+    private MongoClient mongoClient;
     private final Logger logger;
 
     public DBUtil(){
-        personTaskDataBase = getMongoDatabase("PersonTask");
+        getMongoDatabase("PersonTask");
         logger = Logger.getLogger(DBUtil.class.getName());
+    }
+
+    public void closeAndOpenDB() {
+        mongoClient.close();
+        getMongoDatabase("PersonTask");
+    }
+
+    public MongoClient getMongoClient() {
+        return mongoClient;
     }
 
     public MongoDatabase getPersonTaskDataBase() {
@@ -36,8 +46,7 @@ public class DBUtil {
         return logger;
     }
 
-    private MongoDatabase getMongoDatabase(String dbName) {
-
+    private void getMongoDatabase(String dbName) {
         Logger.getLogger( "org.mongodb.driver" ).setLevel(Level.WARNING);
         ConnectionString mongoUri = new ConnectionString("mongodb://localhost:27017/");
 
@@ -48,15 +57,13 @@ public class DBUtil {
                 .codecRegistry(pojoCodecRegistry)
                 .applyConnectionString(mongoUri).build();
 
-        try (MongoClient mongoClient = MongoClients.create(settings)) {
+        try {
+            mongoClient = MongoClients.create(settings);
+            personTaskDataBase = mongoClient.getDatabase(dbName);
 
-            MongoDatabase database = mongoClient.getDatabase(dbName);
-
-            return database;
         } catch (MongoException me) {
             getLogger().log(Level.SEVERE, "Unable to connect to the MongoDB instance due to an error: ", me);
             System.exit(1);
-            return null; // Ensure the method returns a value even in case of an error
         }
     }
 }

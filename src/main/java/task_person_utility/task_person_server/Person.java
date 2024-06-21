@@ -37,7 +37,7 @@ public class Person {
         this.name = name;
     }
 
-    public boolean isAvailability() {
+    public boolean getAvailability() {
         return availability;
     }
 
