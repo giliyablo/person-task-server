@@ -1,8 +1,10 @@
-package task_person_utility.task_person_server; // Add a package declaration
+package task_person_utility.task_person_server; 
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
@@ -30,23 +32,34 @@ import java.util.logging.Logger;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
-@Repository
-interface TaskRepository extends MongoRepository<Task, String> {
+@Service
+public class TaskServices  {
 
-    private static Logger getLogger() {
-        return Logger.getLogger(TaskRepository.class.getName());
+    private final MongoDatabase personTaskDataBase;
+    private final MongoCollection<Task> tasksDB;
+    private final AssignTasksServices assignTasksServices;
+    private final Logger logger;
+
+    @Autowired
+    public TaskServices(DBUtil dbutil, AssignTasksServices assignTasksServices){
+        personTaskDataBase=dbutil.getPersonTaskDataBase();
+        this.assignTasksServices=assignTasksServices;
+        tasksDB = personTaskDataBase.getCollection("tasks", Task.class);
+        logger = Logger.getLogger(TaskServices.class.getName());
     }
 
-    static MongoCollection<Task> tasksDB = DB_Util.getTasksDB();
+    private Logger getLogger() {
+        return logger;
+    }
 
-    public default Task createTask(Task task) {
+    public Task createTask(Task task) {
 
         try {
             InsertOneResult result = tasksDB.insertOne(task);
             if (getLogger().isLoggable(Level.INFO)) {
                 getLogger().log(Level.INFO, String.format("Inserted document with ID: %s", result.getInsertedId()));
             }
-            AssignTasksUtil.assignTasks();
+            assignTasksServices.assignTasks();
             return task;
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
@@ -56,7 +69,7 @@ interface TaskRepository extends MongoRepository<Task, String> {
         }
     }
 
-    public default List<Task> getAllTasks() {
+    public List<Task> getAllTasks() {
         List<Task> tasks = new ArrayList<>();
 
         try (MongoCursor<Task> cursor = tasksDB.find().iterator()) {
@@ -77,7 +90,7 @@ interface TaskRepository extends MongoRepository<Task, String> {
         return tasks;
     }
 
-    public default Task getTask(String name) {
+    public Task getTask(String name) {
 
         // We can also find a single document. Let's find the first document
         // that has the string "potato" in the ingredients list. We
@@ -105,7 +118,7 @@ interface TaskRepository extends MongoRepository<Task, String> {
         return findNameTask;
     }
 
-    public default Task updateTask(String name, Task task) {
+    public Task updateTask(String name, Task task) {
 
         Task taskToUpdate = getTask( name);
 
@@ -136,7 +149,7 @@ interface TaskRepository extends MongoRepository<Task, String> {
             }else{
                 getLogger().log(Level.INFO, "\nUpdated the task to: {0}" , updatedDocument);
             }
-            AssignTasksUtil.assignTasks();
+            assignTasksServices.assignTasks();
             return updatedDocument; // Ensure return here
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
@@ -147,7 +160,7 @@ interface TaskRepository extends MongoRepository<Task, String> {
     }
 
 
-    public default Task deleteTask(String name) {
+    public Task deleteTask(String name) {
 
         Task taskToDelete = getTask( name);
 
@@ -170,7 +183,7 @@ interface TaskRepository extends MongoRepository<Task, String> {
                 return null; // Ensure return here
             } else {
                 getLogger().log(Level.INFO, "\nDeleted the task: {0}", name);
-                AssignTasksUtil.assignTasks();
+                assignTasksServices.assignTasks();
                 return taskToDelete; // Ensure return here
             }
         } catch (MongoException me) {

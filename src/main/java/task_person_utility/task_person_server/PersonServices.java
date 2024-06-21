@@ -1,7 +1,10 @@
-package task_person_utility.task_person_server; // Add a package declaration
+package task_person_utility.task_person_server; 
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
@@ -29,23 +32,33 @@ import java.util.logging.Logger;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
-@Repository
-interface PersonRepository extends MongoRepository<Person, String> {
+@Service
+public class PersonServices  {
 
-    private static Logger getLogger() {
-        return Logger.getLogger(PersonRepository.class.getName());
+    private final MongoDatabase personTaskDataBase;
+    private final MongoCollection<Person> personsDB;
+    private final AssignTasksServices assignTasksServices;
+    private final Logger logger;
+
+    @Autowired
+    public PersonServices(DBUtil dbutil, AssignTasksServices assignTasksServices){
+        personTaskDataBase=dbutil.getPersonTaskDataBase();
+        this.assignTasksServices=assignTasksServices;
+        personsDB = personTaskDataBase.getCollection("persons", Person.class);
+        logger = Logger.getLogger(PersonServices.class.getName());
     }
 
-    static MongoCollection<Person> personsDB = DB_Util.getPersonsDB();
+    private Logger getLogger() {
+        return logger;
+    }
 
-    public default Person createPerson(Person person) {
-
+    public Person createPerson(Person person) {
         try {
             InsertOneResult result = personsDB.insertOne(person);
             if (getLogger().isLoggable(Level.INFO)) {
                 getLogger().log(Level.INFO, String.format("Inserted document with ID: %s", result.getInsertedId()));
             }
-            AssignTasksUtil.assignTasks();
+            assignTasksServices.assignTasks();
             return person;
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
@@ -55,7 +68,7 @@ interface PersonRepository extends MongoRepository<Person, String> {
         }
     }
 
-    public default List<Person> getAllPersons() {
+    public List<Person> getAllPersons() {
         List<Person> persons = new ArrayList<>();
 
         try (MongoCursor<Person> cursor = personsDB.find().iterator()) {
@@ -77,7 +90,7 @@ interface PersonRepository extends MongoRepository<Person, String> {
         return persons;
     }
 
-    public default Person getPerson(String name) {
+    public Person getPerson(String name) {
 
         // We can also find a single document. Let's find the first document
         // that has the string "potato" in the ingredients list. We
@@ -105,7 +118,7 @@ interface PersonRepository extends MongoRepository<Person, String> {
         return findNamePerson;
     }
 
-    public default Person updatePerson(String name, Person person) {
+    public Person updatePerson(String name, Person person) {
 
         Person personToUpdate = getPerson( name);
 
@@ -136,7 +149,7 @@ interface PersonRepository extends MongoRepository<Person, String> {
             }else{
                 getLogger().log(Level.INFO, "\nUpdated the person to: {0}" , updatedDocument);
             }
-            AssignTasksUtil.assignTasks();
+            assignTasksServices.assignTasks();
             return updatedDocument; // Ensure return here
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
@@ -147,7 +160,7 @@ interface PersonRepository extends MongoRepository<Person, String> {
     }
 
 
-    public default Person deletePerson(String name) {
+    public Person deletePerson(String name) {
 
         Person personToDelete = getPerson( name);
 
@@ -170,7 +183,7 @@ interface PersonRepository extends MongoRepository<Person, String> {
                 return null; // Ensure return here
             } else {
                 getLogger().log(Level.INFO, "\nDeleted the person: {0}", name);
-                AssignTasksUtil.assignTasks();
+                assignTasksServices.assignTasks();
                 return personToDelete; // Ensure return here
             }
         } catch (MongoException me) {

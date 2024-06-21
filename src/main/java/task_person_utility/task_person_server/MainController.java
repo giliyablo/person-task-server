@@ -1,4 +1,5 @@
 package task_person_utility.task_person_server;
+
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,65 +18,67 @@ import java.util.List;
 public class MainController {
 
     @Autowired
-    private PersonRepository personRepository;
+    private PersonServices personServices;
     @Autowired
-    private TaskRepository taskService;
+    private TaskServices taskServices;
+    @Autowired
+    private AssignTasksServices assignTasksServices;
 
     @GetMapping("/persons")
     public ResponseEntity<List<Person>> getAllPersons() {
-        return ResponseEntity.ok(personRepository.getAllPersons());
+        return ResponseEntity.ok(personServices.getAllPersons());
     }
 
     @PostMapping("/persons")
     public ResponseEntity<Person> createPerson(@RequestBody Person person) {
-        return ResponseEntity.ok(personRepository.createPerson(person));
+        return ResponseEntity.ok(personServices.createPerson(person));
     }
 
     @PutMapping("/persons/{name}")
     public ResponseEntity<Person> updatePerson(@PathVariable String name, @RequestBody Person person) {
-        return ResponseEntity.ok(personRepository.updatePerson(name, person));
+        return ResponseEntity.ok(personServices.updatePerson(name, person));
     }
 
     @DeleteMapping("/persons/{name}")
     public ResponseEntity<Void> deletePerson(@PathVariable String name) {
-        personRepository.deletePerson(name);
+        personServices.deletePerson(name);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/persons/{name}")
     public ResponseEntity<Person> getPerson(@PathVariable String name) {
-        return ResponseEntity.ok(personRepository.getPerson(name));
+        return ResponseEntity.ok(personServices.getPerson(name));
     }
 
     @GetMapping("/tasks")
     public ResponseEntity<List<Task>> getAllTasks() {
-        return ResponseEntity.ok(taskService.getAllTasks());
+        return ResponseEntity.ok(taskServices.getAllTasks());
     }
 
     @PostMapping("/tasks")
     public ResponseEntity<Task> createTask(@RequestBody Task task) {
-        return ResponseEntity.ok(taskService.createTask(task));
+        return ResponseEntity.ok(taskServices.createTask(task));
     }
 
     @PutMapping("/tasks/{name}")
     public ResponseEntity<Task> updateTask(@PathVariable String name, @RequestBody Task task) {
-        return ResponseEntity.ok(taskService.updateTask(name, task));
+        return ResponseEntity.ok(taskServices.updateTask(name, task));
     }
 
     @DeleteMapping("/tasks/{name}")
     public ResponseEntity<Void> deleteTask(@PathVariable String name) {
-        taskService.deleteTask(name);
+        taskServices.deleteTask(name);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/tasks/{name}")
     public ResponseEntity<Task> getTask(@PathVariable String name) {
-        return ResponseEntity.ok(taskService.getTask(name));
+        return ResponseEntity.ok(taskServices.getTask(name));
     }
 
     @GetMapping("/tasks/assign")
     public ResponseEntity<Void> assignTasks() {
-        AssignTasksUtil.assignTasks();
+        assignTasksServices.assignTasks();
         return ResponseEntity.ok().build();
     }
 }

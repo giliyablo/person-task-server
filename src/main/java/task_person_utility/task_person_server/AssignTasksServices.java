@@ -1,8 +1,9 @@
-package task_person_utility.task_person_server; // Add a package declaration
+package task_person_utility.task_person_server;
 
 import com.mongodb.MongoException;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
+import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 
 import org.bson.conversions.Bson;
@@ -16,26 +17,26 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Service
-public class AssignTasksUtil {
+public class AssignTasksServices {
 
-    final private DB_Util db_util;
-    static  MongoCollection<Task> tasksDB;
-    static  MongoCollection<Person> personsDB ;
-    static private Logger logger;
+    private final MongoDatabase personTaskDataBase;
+    private final MongoCollection<Task> tasksDB;
+    private final MongoCollection<Person> personsDB ;
+    private final Logger logger;
 
     @Autowired
-    public AssignTasksUtil(DB_Util db_util){
-        this.db_util=db_util;
-        tasksDB = this.db_util.getTasksDB();
-        personsDB = this.db_util.getPersonsDB();
-        logger = Logger.getLogger(AssignTasksUtil.class.getName());
+    public AssignTasksServices(DBUtil dbutil){
+        personTaskDataBase=dbutil.getPersonTaskDataBase();
+        tasksDB = personTaskDataBase.getCollection("tasks", Task.class);
+        personsDB = personTaskDataBase.getCollection("persons", Person.class);
+        logger = Logger.getLogger(AssignTasksServices.class.getName());
     }
 
-    private static Logger getLogger() {
+    private Logger getLogger() {
         return logger;
     }
 
-    public static void assignTasks() {
+    public void assignTasks() {
         List<Person> availablePersons = getAvailablePersons();
         List<Task> notDoneTasks = getNotDoneTasks();
 
@@ -44,7 +45,7 @@ public class AssignTasksUtil {
         }
     }
 
-    private static List<Person> getAvailablePersons() {
+    private List<Person> getAvailablePersons() {
         List<Person> availablePersons = new ArrayList<>();
         Bson findAvailable = Filters.eq("availability", true);
         try (MongoCursor<Person> personCursor = personsDB.find(findAvailable).iterator()) {
@@ -59,7 +60,7 @@ public class AssignTasksUtil {
         return availablePersons;
     }
 
-    private static List<Task> getNotDoneTasks() {
+    private List<Task> getNotDoneTasks() {
         List<Task> notDoneTasks = new ArrayList<>();
         Bson findDone = Filters.eq("done", false);
         try (MongoCursor<Task> taskCursor = tasksDB.find(findDone).iterator()) {
@@ -74,14 +75,14 @@ public class AssignTasksUtil {
         return notDoneTasks;
     }
 
-    private static void distributeTasks(List<Person> availablePersons, List<Task> notDoneTasks) {
+    private void distributeTasks(List<Person> availablePersons, List<Task> notDoneTasks) {
         int numberOfTasksPerAvailablePerson = notDoneTasks.size() / availablePersons.size();
         for (Task task : notDoneTasks) {
             assignTask(availablePersons, numberOfTasksPerAvailablePerson, task);
         }
     }
 
-    private static boolean assignTask(List<Person> availablePersons, int numberOfTasksPerAvailablePerson, Task task) {
+    private boolean assignTask(List<Person> availablePersons, int numberOfTasksPerAvailablePerson, Task task) {
         boolean foundMin = false;
         if (!availablePersons.isEmpty()) {
             Person minTasksPerson = availablePersons.get(0);
@@ -103,19 +104,19 @@ public class AssignTasksUtil {
         return foundMin;
     }
 
-    private static void logPerson(Person person) {
+    private void logPerson(Person person) {
         if (getLogger().isLoggable(Level.INFO)) {
             getLogger().log(Level.INFO, String.format("%s is in DB%n", person.getName()));
         }
     }
 
-    private static void logTask(Task task) {
+    private void logTask(Task task) {
         if (getLogger().isLoggable(Level.INFO)) {
             getLogger().log(Level.INFO, String.format("%s is in DB%n", task.getName()));
         }
     }
 
-    private static void handleMongoException(MongoException me) {
+    private void handleMongoException(MongoException me) {
         if (getLogger().isLoggable(Level.SEVERE)) {
             getLogger().log(Level.SEVERE, "Unable to find any tasks in MongoDB due to an error: ", me);
         }
