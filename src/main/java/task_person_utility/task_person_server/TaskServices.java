@@ -9,6 +9,7 @@ import com.mongodb.client.model.Updates;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertOneResult;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -42,7 +43,7 @@ public class TaskServices {
         try {
             InsertOneResult result = tasksDB.insertOne(task);
             if (getLogger().isLoggable(Level.INFO)) {
-                getLogger().log(Level.INFO, String.format("Inserted document with ID: %s", result.getInsertedId()));
+                getLogger().log(Level.INFO, String.format("Inserted document with id: %s", result.getInsertedId()));
             }
             assignTasksServices.assignTasks();
             return task;
@@ -72,12 +73,12 @@ public class TaskServices {
         return tasks;
     }
 
-    public Task getTask(String id) {
-        Bson filter = Filters.eq("_id", id);
+    public Task getTask(String name) {
+        Bson filter = Filters.eq("name", name);
         try {
             Task task = tasksDB.find(filter).first();
             if (task == null && getLogger().isLoggable(Level.INFO)) {
-                getLogger().log(Level.INFO, "Unable to find any Task with ID: {0}", id);
+                getLogger().log(Level.INFO, "Unable to find any Task with name: {0}", name);
             }
             return task;
         } catch (MongoException me) {
@@ -88,8 +89,8 @@ public class TaskServices {
         }
     }
 
-    public Task updateTask(String id, Task task) {
-        Bson filter = Filters.eq("_id", id);
+    public Task updateTask(String name, Task task) {
+        Bson filter = Filters.eq("name", name);
         Bson updates = Updates.combine(
                 Updates.set("name", task.getName()),
                 Updates.set("description", task.getDescription()),
@@ -100,7 +101,7 @@ public class TaskServices {
         try {
             Task updatedTask = tasksDB.findOneAndUpdate(filter, updates);
             if (updatedTask != null && getLogger().isLoggable(Level.INFO)) {
-                getLogger().log(Level.INFO, String.format("Updated document with ID: %s", id));
+                getLogger().log(Level.INFO, String.format("Updated document with name: %s", name));
             }
             assignTasksServices.assignTasks();
             return updatedTask;
@@ -112,18 +113,18 @@ public class TaskServices {
         }
     }
 
-    public Task deleteTask(String id) {
-        Task deletedTask = getTask(id);
-        Bson filter = Filters.eq("_id", id);
+    public Task deleteTask(String name) {
+        Task deletedTask = getTask(name);
+        Bson filter = Filters.eq("name", name);
         try {
             DeleteResult result = tasksDB.deleteOne(filter);
             if (result.getDeletedCount() > 0 && getLogger().isLoggable(Level.INFO)) {
-                getLogger().log(Level.INFO, String.format("Deleted document with ID: %s", id));
+                getLogger().log(Level.INFO, String.format("Deleted document with name: %s", name));
                 assignTasksServices.assignTasks();
                 return deletedTask;
             } else {
                 if (getLogger().isLoggable(Level.INFO)) {
-                    getLogger().log(Level.INFO, String.format("No task found with ID: %s", id));
+                    getLogger().log(Level.INFO, String.format("No task found with name: %s", name));
                 }
                 return null;
             }

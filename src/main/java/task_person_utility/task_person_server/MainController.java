@@ -7,6 +7,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "http://localhost:3000")
 public class MainController {
     @Autowired
     private PersonServices personServices;
@@ -26,14 +27,14 @@ public class MainController {
         return personServices.createPerson(person);
     }
 
-    @PutMapping("/persons/{id}")
-    public Person updatePerson(@PathVariable String id, @RequestBody Person person) {
-        return personServices.updatePerson(id, person);
+    @PutMapping("/persons/{name}")
+    public Person updatePerson(@PathVariable String name, @RequestBody Person person) {
+        return personServices.updatePerson(name, person);
     }
 
-    @DeleteMapping("/persons/{id}")
-    public Person deletePerson(@PathVariable String id) {
-        return personServices.deletePerson(id);
+    @DeleteMapping("/persons/{name}")
+    public Person deletePerson(@PathVariable String name) {
+        return personServices.deletePerson(name);
     }
 
     // Task API endpoints
@@ -47,14 +48,14 @@ public class MainController {
         return taskServices.createTask(task);
     }
 
-    @PutMapping("/tasks/{id}")
-    public Task updateTask(@PathVariable String id, @RequestBody Task task) {
-        return taskServices.updateTask(id, task);
+    @PutMapping("/tasks/{name}")
+    public Task updateTask(@PathVariable String name, @RequestBody Task task) {
+        return taskServices.updateTask(name, task);
     }
 
-    @DeleteMapping("/tasks/{id}")
-    public Task deleteTask(@PathVariable String id) {
-        return taskServices.deleteTask(id);
+    @DeleteMapping("/tasks/{name}")
+    public Task deleteTask(@PathVariable String name) {
+        return taskServices.deleteTask(name);
     }
 
     // Additional endpoints

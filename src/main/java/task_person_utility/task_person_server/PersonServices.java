@@ -11,6 +11,7 @@ import com.mongodb.client.model.Updates;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertOneResult;
 import org.bson.conversions.Bson;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -75,14 +76,15 @@ public class PersonServices {
         return persons;
     }
 
-    public Person getPerson(String id) {
-        Bson findId = Filters.eq("_id", id);
+    public Person getPerson(String name) {
+
+        Bson findId = Filters.eq("name", name);
         Person findIdPerson = null;
         try {
             findIdPerson = personsDB.find(findId).first();
             if (findIdPerson == null) {
                 if (getLogger().isLoggable(Level.INFO)) {
-                    getLogger().log(Level.INFO, "Unable to find any person with ID: {0}", id);
+                    getLogger().log(Level.INFO, "Unable to find any person with name: {0}", name);
                 }
                 System.exit(1);
             }
@@ -96,9 +98,9 @@ public class PersonServices {
         return findIdPerson;
     }
 
-    public Person updatePerson(String id, Person person) {
+    public Person updatePerson(String name, Person person) {
         Person updatedPerson = null;
-        Bson filter = Filters.eq("_id", id);
+        Bson filter = Filters.eq("name", name);
         Bson update = Updates.combine(
                 Updates.set("name", person.getName()),
                 Updates.set("availability", person.getAvailability()),
@@ -116,9 +118,9 @@ public class PersonServices {
         return updatedPerson;
     }
 
-    public Person deletePerson(String id) {
+    public Person deletePerson(String name) {
         Person deletedPerson = null;
-        Bson filter = Filters.eq("_id", id);
+        Bson filter = Filters.eq("name", name);
         try {
             deletedPerson = personsDB.findOneAndDelete(filter);
             assignTasksServices.assignTasks();
