@@ -50,14 +50,12 @@ public class AssignTasksServices {
     public boolean assignTasks(boolean forced) {
         List<Person> availablePersons = getAvailablePersons();
         List<Task> notDoneTasks = getNotDoneTasks(true);
-        double numberOfTasksPerAvailablePerson = (notDoneTasks.size()+0.0) / (availablePersons.size()+0.0);
-
         if (!availablePersons.isEmpty() && !notDoneTasks.isEmpty()) {
-            notDoneTasks = getNotDoneTasks(forced);
+            double numberOfTasksPerAvailablePerson = Math.floor((notDoneTasks.size()+0.0) / (availablePersons.size()+0.0));
             distributeTasks(availablePersons, notDoneTasks, numberOfTasksPerAvailablePerson);
-
             return true;
-        }else if (!availablePersons.isEmpty()){
+        }
+        if (!availablePersons.isEmpty()){
             Iterator<Person> availablePersonsIterator = availablePersons.iterator();
             while(availablePersonsIterator.hasNext()){
                 Person person = availablePersonsIterator.next();
