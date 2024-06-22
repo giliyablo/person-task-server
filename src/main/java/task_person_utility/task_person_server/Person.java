@@ -1,20 +1,21 @@
 package task_person_utility.task_person_server;
-
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "persons")
 public class Person {
     @Id
-    private String id;
+    private ObjectId id;
     private String name;
     private boolean availability;
     private int tasksAssignedNumber;
 
-    public Person() {
-        this.name = "Unknown";
-        this.availability = true;
-        this.tasksAssignedNumber = 0;
+    public Person(ObjectId id, String name, boolean availability, int tasksAssignedNumber) {
+        this.id = id;
+        this.name = name;
+        this.availability = availability;
+        this.tasksAssignedNumber = tasksAssignedNumber;
     }
 
     public Person(String name, boolean availability, int tasksAssignedNumber) {
@@ -24,18 +25,20 @@ public class Person {
     }
 
     public Person(String name) {
-        this.name = name;
-        this.availability = true;
-        this.tasksAssignedNumber = 0;
+        this(name,true,0);
+    }
+
+    public Person() {
+        this("Unknown");
     }
 
     // Getters and setters
 
-    public String getId() {
+    public ObjectId getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(ObjectId id) {
         this.id = id;
     }
 
