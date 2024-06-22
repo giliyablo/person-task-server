@@ -6,8 +6,10 @@ import com.mongodb.MongoException;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
+import jakarta.annotation.PreDestroy;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +19,7 @@ import java.util.logging.Logger;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
-@Service
+@Component
 public class DBUtil {
 
     private MongoDatabase personTaskDataBase;
@@ -29,15 +31,17 @@ public class DBUtil {
         logger = Logger.getLogger(DBUtil.class.getName());
     }
 
-    public void closeAndOpenDB() {
+    @PreDestroy
+    public void closeDBClient() {
         mongoClient.close();
-        getMongoDatabase("PersonTask");
     }
 
+    @Bean
     public MongoClient getMongoClient() {
         return mongoClient;
     }
 
+    @Bean
     public MongoDatabase getPersonTaskDataBase() {
         return personTaskDataBase;
     }

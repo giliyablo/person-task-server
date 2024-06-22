@@ -35,16 +35,16 @@ import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 @Service
 public class TaskServices  {
 
-    private final DBUtil dbutil;
+    // private final DBUtil dbutil;
     private final MongoDatabase personTaskDataBase;
     private final MongoCollection<Task> tasksDB;
     private final AssignTasksServices assignTasksServices;
     private final Logger logger;
 
     @Autowired
-    public TaskServices(DBUtil dbutil, AssignTasksServices assignTasksServices){
-        this.dbutil=dbutil;
-        personTaskDataBase=this.dbutil.getPersonTaskDataBase();
+    public TaskServices(MongoDatabase mongoDatabase, AssignTasksServices assignTasksServices){
+        // this.dbutil=dbutil;
+        personTaskDataBase=mongoDatabase;// this.dbutil.getPersonTaskDataBase();
         this.assignTasksServices=assignTasksServices;
         tasksDB = personTaskDataBase.getCollection("tasks", Task.class);
         logger = Logger.getLogger(TaskServices.class.getName());
@@ -89,7 +89,7 @@ public class TaskServices  {
             System.exit(1);
         }
 
-        dbutil.closeAndOpenDB();
+        
         return tasks;
     }
 
@@ -105,7 +105,7 @@ public class TaskServices  {
                 }
                 System.exit(1);
             }
-            dbutil.closeAndOpenDB();
+            
             return findNameTask;
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
