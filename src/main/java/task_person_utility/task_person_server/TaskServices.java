@@ -94,7 +94,7 @@ public class TaskServices {
                 Updates.set("name", task.getName()),
                 Updates.set("description", task.getDescription()),
                 Updates.set("dateOfCreation", task.getDateOfCreation()),
-                Updates.set("done", task.isDone()),
+                Updates.set("done", task.getDone()),
                 Updates.set("personAssigned", task.getPersonAssigned())
         );
         try {

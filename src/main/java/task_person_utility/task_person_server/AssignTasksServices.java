@@ -95,7 +95,7 @@ public class AssignTasksServices {
 
             for (Person person : availablePersons) {
                 int taskAssignNumber = person.getTasksAssignedNumber();
-                if ((taskAssignNumber < minTasksNumber) && (taskAssignNumber < numberOfTasksPerAvailablePerson)) {
+                if ((taskAssignNumber <= minTasksNumber) && (taskAssignNumber < numberOfTasksPerAvailablePerson)) {
                     foundMin = true;
                     minTasksPerson = person;
                     minTasksNumber=taskAssignNumber;
