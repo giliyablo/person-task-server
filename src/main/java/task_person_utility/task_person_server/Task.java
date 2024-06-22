@@ -1,17 +1,22 @@
 package task_person_utility.task_person_server;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "tasks")
 public class Task {
+    @Id
+    private String id;
     private String name;
     private String description;
     private java.time.LocalDate dateOfCreation;
     private boolean done;
-    @org.springframework.data.mongodb.core.mapping.DBRef
+    @DBRef
     private Person personAssigned;
 
-    public Task(String name, String description, java.time.LocalDate dateOfCreation, boolean done, Person personAssigned) {
+    public Task(String id, String name, String description, java.time.LocalDate dateOfCreation, boolean done, Person personAssigned) {
+        this.id = id;
         this.name = name;
         this.description = description;
         this.dateOfCreation = dateOfCreation;
@@ -43,8 +48,15 @@ public class Task {
         this.personAssigned = null;
     }
 
-
     // Getters and setters
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;
@@ -89,6 +101,7 @@ public class Task {
     @Override
     public String toString() {
         return "Task{" +
+                "id='" + id + '\'' +
                 "name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 ", dateOfCreation=" + dateOfCreation +

@@ -11,7 +11,6 @@ import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,7 +26,7 @@ public class DBUtil {
     private final Logger logger;
 
     public DBUtil(){
-        getMongoDatabase("PersonTask");
+        initializeDB("PersonTask");
         logger = Logger.getLogger(DBUtil.class.getName());
     }
 
@@ -50,7 +49,12 @@ public class DBUtil {
         return logger;
     }
 
-    private void getMongoDatabase(String dbName) {
+    public void renewDB(String dbName) {
+        closeDBClient();
+        initializeDB("PersonTask");
+    }
+
+    private void initializeDB(String dbName) {
         Logger.getLogger( "org.mongodb.driver" ).setLevel(Level.WARNING);
         ConnectionString mongoUri = new ConnectionString("mongodb://localhost:27017/");
 

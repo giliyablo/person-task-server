@@ -1,15 +1,6 @@
 package task_person_utility.task_person_server;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.stereotype.Repository;
-import org.springframework.stereotype.Service;
-
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoException;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
@@ -19,24 +10,18 @@ import com.mongodb.client.model.ReturnDocument;
 import com.mongodb.client.model.Updates;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertOneResult;
-
-import org.bson.codecs.configuration.CodecRegistry;
-import org.bson.codecs.pojo.PojoCodecProvider;
 import org.bson.conversions.Bson;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
-import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
-
 @Service
-public class PersonServices  {
+public class PersonServices {
 
-    // private final DBUtil dbutil;
-    private final MongoDatabase personTaskDataBase;
     private final MongoCollection<Person> personsDB;
     private final AssignTasksServices assignTasksServices;
     private final Logger logger;
@@ -45,11 +30,9 @@ public class PersonServices  {
     private PersonRepository personRepository;
 
     @Autowired
-    public PersonServices(MongoDatabase mongoDatabase, AssignTasksServices assignTasksServices){
-        // this.dbutil=dbutil;
-        personTaskDataBase=mongoDatabase;// this.dbutil.getPersonTaskDataBase();
-        this.assignTasksServices=assignTasksServices;
-        personsDB = personTaskDataBase.getCollection("persons", Person.class);
+    public PersonServices(MongoDatabase mongoDatabase, AssignTasksServices assignTasksServices) {
+        personsDB = mongoDatabase.getCollection("persons", Person.class);
+        this.assignTasksServices = assignTasksServices;
         logger = Logger.getLogger(PersonServices.class.getName());
     }
 
@@ -75,14 +58,12 @@ public class PersonServices  {
 
     public List<Person> getAllPersons() {
         List<Person> persons = new ArrayList<>();
-
         try (MongoCursor<Person> cursor = personsDB.find().iterator()) {
             while (cursor.hasNext()) {
                 Person currentPerson = cursor.next();
                 persons.add(currentPerson);
                 if (getLogger().isLoggable(Level.INFO)) {
-                    getLogger().log(Level.INFO, String.format("%s is in DB%n",
-                            currentPerson.getName()));
+                    getLogger().log(Level.INFO, String.format("%s is in DB%n", currentPerson.getName()));
                 }
             }
         } catch (MongoException me) {
@@ -91,89 +72,61 @@ public class PersonServices  {
             }
             System.exit(1);
         }
-
-        
         return persons;
     }
 
-    public Person getPerson(String name) {
-
-        Bson findName = Filters.eq("name", name);
-        Person findNamePerson = null;
+    public Person getPerson(String id) {
+        Bson findId = Filters.eq("_id", id);
+        Person findIdPerson = null;
         try {
-            findNamePerson = personsDB.find(findName).first();
-            if (findNamePerson == null) {
+            findIdPerson = personsDB.find(findId).first();
+            if (findIdPerson == null) {
                 if (getLogger().isLoggable(Level.INFO)) {
-                    getLogger().log(Level.INFO, "Unable to find any person named: {0}", name);
+                    getLogger().log(Level.INFO, "Unable to find any person with ID: {0}", id);
                 }
                 System.exit(1);
             }
-            
-            return findNamePerson;
+            return findIdPerson;
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
                 getLogger().log(Level.SEVERE, "Unable to find any persons in MongoDB due to an error: ", me);
             }
             System.exit(1);
         }
-
-        return findNamePerson;
+        return findIdPerson;
     }
 
-    public Person updatePerson(String name, Person person) {
-
-        Person personToUpdate = getPerson( name);
-
-        Bson findName = Filters.eq("name", name);
-
-        Bson updateFilter = Updates.set("name", person.getName());
-
+    public Person updatePerson(String id, Person person) {
+        Person updatedPerson = null;
+        Bson filter = Filters.eq("_id", id);
+        Bson update = Updates.combine(
+                Updates.set("name", person.getName()),
+                Updates.set("availability", person.getAvailability()),
+                Updates.set("tasksAssignedNumber", person.getTasksAssignedNumber())
+        );
         FindOneAndUpdateOptions options = new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER);
-
         try {
-            Person updatedDocument = personsDB.findOneAndUpdate(findName,
-                    updateFilter, options);
-            if (updatedDocument == null) {
-                if (getLogger().isLoggable(Level.INFO)) {
-                    getLogger().log(Level.INFO, "Couldn't update the person. Did someone (or something) delete it?");
-                }
-            }else{
-                getLogger().log(Level.INFO, "\nUpdated the person to: {0}" , updatedDocument);
-            }
+            updatedPerson = personsDB.findOneAndUpdate(filter, update, options);
             assignTasksServices.assignTasks();
-            return updatedDocument; // Ensure return here
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
-                getLogger().log(Level.SEVERE, "Unable to update any persons in MongoDB due to an error: ", me);
+                getLogger().log(Level.SEVERE, "Unable to update person in MongoDB due to an error: ", me);
             }
-            return null; // Return null in case of exception
         }
+        return updatedPerson;
     }
 
-
-    public Person deletePerson(String name) {
-
-        Person personToDelete = getPerson( name);
-
-        Bson deleteFilter = Filters.eq("name", name);
+    public Person deletePerson(String id) {
+        Person deletedPerson = null;
+        Bson filter = Filters.eq("_id", id);
         try {
-            DeleteResult deleteResult = personsDB
-                    .deleteOne(deleteFilter);
-            if (deleteResult.getDeletedCount() == 0) { // Check if no documents were deleted
-                if (getLogger().isLoggable(Level.INFO)) {
-                    getLogger().log(Level.INFO, "Couldn't delete the person. Did someone (or something) delete it?");
-                }
-                return null; // Ensure return here
-            } else {
-                getLogger().log(Level.INFO, "\nDeleted the person: {0}", name);
-                assignTasksServices.assignTasks();
-                return personToDelete; // Ensure return here
-            }
+            deletedPerson = personsDB.findOneAndDelete(filter);
+            assignTasksServices.assignTasks();
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
-                getLogger().log(Level.SEVERE, "Unable to delete any persons in MongoDB due to an error: ", me);
+                getLogger().log(Level.SEVERE, "Unable to delete person from MongoDB due to an error: ", me);
             }
-            return null; // Return null in case of exception
         }
+        return deletedPerson;
     }
 }
