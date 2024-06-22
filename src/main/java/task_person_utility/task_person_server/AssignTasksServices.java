@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -48,12 +49,20 @@ public class AssignTasksServices {
 
     public boolean assignTasks(boolean forced) {
         List<Person> availablePersons = getAvailablePersons();
-        List<Task> notDoneTasks = getNotDoneTasks(forced);
+        List<Task> notDoneTasks = getNotDoneTasks(true);
+        double numberOfTasksPerAvailablePerson = (notDoneTasks.size()+0.0) / (availablePersons.size()+0.0);
 
         if (!availablePersons.isEmpty() && !notDoneTasks.isEmpty()) {
-            distributeTasks(availablePersons, notDoneTasks);
+            notDoneTasks = getNotDoneTasks(forced);
+            distributeTasks(availablePersons, notDoneTasks, numberOfTasksPerAvailablePerson);
 
             return true;
+        }else if (!availablePersons.isEmpty()){
+            Iterator<Person> availablePersonsIterator = availablePersons.iterator();
+            while(availablePersonsIterator.hasNext()){
+                Person person = availablePersonsIterator.next();
+                fixAPersonsTasksCount(person);
+            }
         }
         return false;
     }
@@ -97,8 +106,7 @@ public class AssignTasksServices {
         return notDoneTasks;
     }
 
-    private void distributeTasks(List<Person> availablePersons, List<Task> notDoneTasks) {
-        double numberOfTasksPerAvailablePerson = (notDoneTasks.size()+0.0) / (availablePersons.size()+0.0);
+    private void distributeTasks(List<Person> availablePersons, List<Task> notDoneTasks, double numberOfTasksPerAvailablePerson) {
         for (Task task : notDoneTasks) {
             assignTask(availablePersons, numberOfTasksPerAvailablePerson, task);
         }
