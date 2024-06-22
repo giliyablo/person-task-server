@@ -1,6 +1,7 @@
 package task_person_utility.task_person_server;
 
 import com.mongodb.MongoException;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
@@ -42,8 +43,12 @@ public class AssignTasksServices {
     }
 
     public boolean assignTasks() {
+        return assignTasks(false);
+    }
+
+    public boolean assignTasks(boolean forced) {
         List<Person> availablePersons = getAvailablePersons();
-        List<Task> notDoneTasks = getNotDoneTasks();
+        List<Task> notDoneTasks = getNotDoneTasks(forced);
 
         if (!availablePersons.isEmpty() && !notDoneTasks.isEmpty()) {
             distributeTasks(availablePersons, notDoneTasks);
@@ -68,13 +73,22 @@ public class AssignTasksServices {
         return availablePersons;
     }
 
-    private List<Task> getNotDoneTasks() {
+    private List<Task> getNotDoneTasks(boolean forced) {
         List<Task> notDoneTasks = new ArrayList<>();
         Bson findDone = Filters.eq("done", false);
         try (MongoCursor<Task> taskCursor = tasksDB.find(findDone).iterator()) {
             while (taskCursor.hasNext()) {
                 Task currentTask = taskCursor.next();
-                notDoneTasks.add(currentTask);
+                if (forced || (currentTask.getPersonAssigned() == null)) {
+                    notDoneTasks.add(currentTask);
+                }else{
+                    Person personForCheck = currentTask.getPersonAssigned();
+                    Bson personExists = Filters.eq("name",personForCheck.getName());
+                    FindIterable<Person> existingPersons = personsDB.find(personExists);
+                    if (!existingPersons.iterator().hasNext()){
+                        notDoneTasks.add(currentTask);
+                    }
+                }
                 logTask(currentTask);
             }
         } catch (MongoException me) {
@@ -105,13 +119,41 @@ public class AssignTasksServices {
                 }
             }
             if (foundMin) {
+                Person oldPerson = task.getPersonAssigned();
                 task.setPersonAssigned(minTasksPerson);
-                minTasksPerson.setTasksAssignedNumber(minTasksNumber + 1);
                 onlyUpdateTask(task.getName(),task);
-                onlyUpdatePerson(minTasksPerson.getName(),minTasksPerson);
+
+                if (oldPerson != null){
+                    fixAPersonsTasksCount(oldPerson);
+                }
+                fixAPersonsTasksCount(minTasksPerson);
             }
         }
         return foundMin;
+    }
+
+    private void fixAPersonsTasksCount(Person person) {
+        Bson filterPersonExists = Filters.exists("personAssigned");
+        FindIterable<Task> tasksWithPersons = tasksDB.find(filterPersonExists);
+
+        List<Task> tasks = new ArrayList<>();
+        try (MongoCursor<Task> cursor = tasksWithPersons.iterator()) {
+            while (cursor.hasNext()) {
+                Task currentTask = cursor.next();
+                if (currentTask.getPersonAssigned().getName().compareTo(person.getName()) == 0){
+                    tasks.add(currentTask);
+                }
+                if (getLogger().isLoggable(Level.INFO)) {
+                    getLogger().log(Level.INFO, String.format("%s is in DB%n", currentTask.getName()));
+                }
+            }
+            person.setTasksAssignedNumber(tasks.size());
+            onlyUpdatePerson(person.getName(),person);
+        } catch (MongoException me) {
+            if (getLogger().isLoggable(Level.SEVERE)) {
+                getLogger().log(Level.SEVERE, "Unable to find any tasks in MongoDB due to an error: ", me);
+            }
+        }
     }
 
     private void logPerson(Person person) {

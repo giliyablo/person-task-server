@@ -61,6 +61,6 @@ public class MainController {
     // Additional endpoints
     @GetMapping("/tasks/assign")
     public boolean assignTasks() {
-        return assignTasksServices.assignTasks();
+        return assignTasksServices.assignTasks(true);
     }
 }
