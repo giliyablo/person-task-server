@@ -78,7 +78,7 @@ public class Task {
         this.dateOfCreation = dateOfCreation;
     }
 
-    public boolean isDone() {
+    public boolean getDone() {
         return done;
     }
 
