@@ -5,11 +5,9 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Updates;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertOneResult;
 import org.bson.conversions.Bson;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +20,7 @@ import java.util.logging.Logger;
 public class TaskServices {
 
     private final MongoCollection<Task> tasksDB;
-    private final AssignTasksServices assignTasksServices;
+    final AssignTasksServices assignTasksServices;
     private final Logger logger;
 
     @Autowired
@@ -70,6 +68,7 @@ public class TaskServices {
                 getLogger().log(Level.SEVERE, "Unable to find any tasks in MongoDB due to an error: ", me);
             }
         }
+        assignTasksServices.assignTasks();
         return tasks;
     }
 
@@ -80,6 +79,7 @@ public class TaskServices {
             if (task == null && getLogger().isLoggable(Level.INFO)) {
                 getLogger().log(Level.INFO, "Unable to find any Task with name: {0}", name);
             }
+            assignTasksServices.assignTasks();
             return task;
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
@@ -90,27 +90,9 @@ public class TaskServices {
     }
 
     public Task updateTask(String name, Task task) {
-        Bson filter = Filters.eq("name", name);
-        Bson updates = Updates.combine(
-                Updates.set("name", task.getName()),
-                Updates.set("description", task.getDescription()),
-                Updates.set("dateOfCreation", task.getDateOfCreation()),
-                Updates.set("done", task.getDone()),
-                Updates.set("personAssigned", task.getPersonAssigned())
-        );
-        try {
-            Task updatedTask = tasksDB.findOneAndUpdate(filter, updates);
-            if (updatedTask != null && getLogger().isLoggable(Level.INFO)) {
-                getLogger().log(Level.INFO, String.format("Updated document with name: %s", name));
-            }
-            assignTasksServices.assignTasks();
-            return updatedTask;
-        } catch (MongoException me) {
-            if (getLogger().isLoggable(Level.SEVERE)) {
-                getLogger().log(Level.SEVERE, "Unable to update Task in MongoDB due to an error: ", me);
-            }
-            return null;
-        }
+        Task updateTask = assignTasksServices.onlyUpdateTask(name,task);
+        assignTasksServices.assignTasks();
+        return updateTask;
     }
 
     public Task deleteTask(String name) {

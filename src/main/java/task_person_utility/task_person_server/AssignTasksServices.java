@@ -6,6 +6,9 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 
+import com.mongodb.client.model.FindOneAndUpdateOptions;
+import com.mongodb.client.model.ReturnDocument;
+import com.mongodb.client.model.Updates;
 import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -81,13 +84,13 @@ public class AssignTasksServices {
     }
 
     private void distributeTasks(List<Person> availablePersons, List<Task> notDoneTasks) {
-        int numberOfTasksPerAvailablePerson = notDoneTasks.size() / availablePersons.size();
+        double numberOfTasksPerAvailablePerson = (notDoneTasks.size()+0.0) / (availablePersons.size()+0.0);
         for (Task task : notDoneTasks) {
             assignTask(availablePersons, numberOfTasksPerAvailablePerson, task);
         }
     }
 
-    private boolean assignTask(List<Person> availablePersons, int numberOfTasksPerAvailablePerson, Task task) {
+    private boolean assignTask(List<Person> availablePersons, double numberOfTasksPerAvailablePerson, Task task) {
         boolean foundMin = false;
         if (!availablePersons.isEmpty()) {
             Person minTasksPerson = availablePersons.get(0);
@@ -104,6 +107,8 @@ public class AssignTasksServices {
             if (foundMin) {
                 task.setPersonAssigned(minTasksPerson);
                 minTasksPerson.setTasksAssignedNumber(minTasksNumber + 1);
+                onlyUpdateTask(task.getName(),task);
+                onlyUpdatePerson(minTasksPerson.getName(),minTasksPerson);
             }
         }
         return foundMin;
@@ -126,5 +131,47 @@ public class AssignTasksServices {
             getLogger().log(Level.SEVERE, "Unable to find any tasks in MongoDB due to an error: ", me);
         }
         System.exit(1);
+    }
+
+    public Person onlyUpdatePerson(String name, Person person) {
+        Person updatedPerson = null;
+        Bson filter = Filters.eq("name", name);
+        Bson update = Updates.combine(
+                Updates.set("name", person.getName()),
+                Updates.set("availability", person.getAvailability()),
+                Updates.set("tasksAssignedNumber", person.getTasksAssignedNumber())
+        );
+        FindOneAndUpdateOptions options = new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER);
+        try {
+            updatedPerson = personsDB.findOneAndUpdate(filter, update, options);
+        } catch (MongoException me) {
+            if (getLogger().isLoggable(Level.SEVERE)) {
+                getLogger().log(Level.SEVERE, "Unable to update person in MongoDB due to an error: ", me);
+            }
+        }
+        return updatedPerson;
+    }
+
+    public Task onlyUpdateTask(String name, Task task) {
+        Bson filter = Filters.eq("name", name);
+        Bson updates = Updates.combine(
+                Updates.set("name", task.getName()),
+                Updates.set("description", task.getDescription()),
+                Updates.set("dateOfCreation", task.getDateOfCreation()),
+                Updates.set("done", task.getDone()),
+                Updates.set("personAssigned", task.getPersonAssigned())
+        );
+        try {
+            Task updatedTask = tasksDB.findOneAndUpdate(filter, updates);
+            if (updatedTask != null && getLogger().isLoggable(Level.INFO)) {
+                getLogger().log(Level.INFO, String.format("Updated document with name: %s", name));
+            }
+            return updatedTask;
+        } catch (MongoException me) {
+            if (getLogger().isLoggable(Level.SEVERE)) {
+                getLogger().log(Level.SEVERE, "Unable to update Task in MongoDB due to an error: ", me);
+            }
+            return null;
+        }
     }
 }

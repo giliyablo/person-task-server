@@ -5,13 +5,8 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.FindOneAndUpdateOptions;
-import com.mongodb.client.model.ReturnDocument;
-import com.mongodb.client.model.Updates;
-import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertOneResult;
 import org.bson.conversions.Bson;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +19,7 @@ import java.util.logging.Logger;
 public class PersonServices {
 
     private final MongoCollection<Person> personsDB;
-    private final AssignTasksServices assignTasksServices;
+    final AssignTasksServices assignTasksServices;
     private final Logger logger;
 
     @Autowired
@@ -73,6 +68,7 @@ public class PersonServices {
             }
             System.exit(1);
         }
+        assignTasksServices.assignTasks();
         return persons;
     }
 
@@ -95,31 +91,18 @@ public class PersonServices {
             }
             System.exit(1);
         }
+        assignTasksServices.assignTasks();
         return findIdPerson;
     }
 
     public Person updatePerson(String name, Person person) {
-        Person updatedPerson = null;
-        Bson filter = Filters.eq("name", name);
-        Bson update = Updates.combine(
-                Updates.set("name", person.getName()),
-                Updates.set("availability", person.getAvailability()),
-                Updates.set("tasksAssignedNumber", person.getTasksAssignedNumber())
-        );
-        FindOneAndUpdateOptions options = new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER);
-        try {
-            updatedPerson = personsDB.findOneAndUpdate(filter, update, options);
-            assignTasksServices.assignTasks();
-        } catch (MongoException me) {
-            if (getLogger().isLoggable(Level.SEVERE)) {
-                getLogger().log(Level.SEVERE, "Unable to update person in MongoDB due to an error: ", me);
-            }
-        }
-        return updatedPerson;
+        Person updatePerson = assignTasksServices.onlyUpdatePerson(name,person);
+        assignTasksServices.assignTasks();
+        return updatePerson;
     }
 
     public Person deletePerson(String name) {
-        Person deletedPerson = null;
+        Person deletedPerson = getPerson(name);
         Bson filter = Filters.eq("name", name);
         try {
             deletedPerson = personsDB.findOneAndDelete(filter);
