@@ -24,16 +24,12 @@ import java.util.logging.Logger;
 @Service
 public class AssignTasksServices {
 
-    // private final DBUtil dbutil;
-    // private final MongoDatabase personTaskDataBase;
     private final MongoCollection<Task> tasksDB;
     private final MongoCollection<Person> personsDB ;
     private final Logger logger;
 
     @Autowired
     public AssignTasksServices(MongoDatabase mongoDatabase){
-        // this.dbutil = dbutil;
-        // personTaskDataBase=mongoDatabase;// this.dbutil.getPersonTaskDataBase();
         tasksDB = mongoDatabase.getCollection("tasks", Task.class);
         personsDB = mongoDatabase.getCollection("persons", Person.class);
         logger = Logger.getLogger(AssignTasksServices.class.getName());
@@ -81,7 +77,11 @@ public class AssignTasksServices {
     }
 
     private List<Task> getNotDoneTasks(boolean forced) {
+
         List<Task> notDoneTasks = new ArrayList<>();
+        Task maxPersonTask = null;
+        int maxTasksCount = 0;
+
         Bson findDone = Filters.eq("done", false);
         try (MongoCursor<Task> taskCursor = tasksDB.find(findDone).iterator()) {
             while (taskCursor.hasNext()) {
@@ -92,11 +92,21 @@ public class AssignTasksServices {
                     Person personForCheck = currentTask.getPersonAssigned();
                     Bson personExists = Filters.eq("name",personForCheck.getName());
                     FindIterable<Person> existingPersons = personsDB.find(personExists);
-                    if (!existingPersons.iterator().hasNext()){
+                    MongoCursor<Person> iterator = existingPersons.iterator();
+                    if (!iterator.hasNext()){
                         notDoneTasks.add(currentTask);
+                    }else{
+                        Person person = iterator.next();
+                        if (maxTasksCount < person.getTasksAssignedNumber()) {
+                            maxTasksCount = person.getTasksAssignedNumber();
+                            maxPersonTask = currentTask;
+                        }
                     }
                 }
                 logTask(currentTask);
+            }
+            if (0 < maxTasksCount) {
+                notDoneTasks.add(maxPersonTask);
             }
         } catch (MongoException me) {
             handleMongoException(me);
@@ -176,9 +186,8 @@ public class AssignTasksServices {
 
     private void handleMongoException(MongoException me) {
         if (getLogger().isLoggable(Level.SEVERE)) {
-            getLogger().log(Level.SEVERE, "Unable to find any tasks in MongoDB due to an error: ", me);
+            getLogger().log(Level.SEVERE, "MongoDB operation failed: ", me);
         }
-        System.exit(1);
     }
 
     public Person onlyUpdatePerson(String name, Person person) {
