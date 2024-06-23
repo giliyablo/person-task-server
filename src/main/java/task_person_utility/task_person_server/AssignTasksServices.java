@@ -45,12 +45,12 @@ public class AssignTasksServices {
 
     public boolean assignTasks(boolean forced) {
         boolean changed = false;
-        
+
         List<Person> availablePersons = getAvailablePersons();
         List<Task> notDoneTasks = getNotDoneTasks(true);
         if (!availablePersons.isEmpty() && !notDoneTasks.isEmpty()) {
             double numberOfTasksPerAvailablePerson = Math.floor((notDoneTasks.size()+0.0) / (availablePersons.size()+0.0));
-            
+
             notDoneTasks = getNotDoneTasks(forced);
             distributeTasks(availablePersons, notDoneTasks, numberOfTasksPerAvailablePerson);
 
@@ -58,7 +58,7 @@ public class AssignTasksServices {
             while (notAvailablePersons.hasNext()){
                 Person notAvailablePerson = notAvailablePersons.next();
                 List<Task> tasksForDist = findTasksWithThisPerson(notAvailablePerson);
-                distributeTasks(availablePersons, tasksForDist, numberOfTasksPerAvailablePerson);
+                distributeTasks(availablePersons, tasksForDist, numberOfTasksPerAvailablePerson, true);
             }
 
             changed = true;
@@ -134,13 +134,23 @@ public class AssignTasksServices {
         return notDoneTasks;
     }
 
-    private void distributeTasks(List<Person> availablePersons, List<Task> notDoneTasks, double numberOfTasksPerAvailablePerson) {
-        for (Task task : notDoneTasks) {
-            findAPersonToAssignATaskTo(availablePersons, numberOfTasksPerAvailablePerson, task);
+    private void distributeTasks(List<Person> availablePersons, List<Task> tasks, double numberOfTasksPerAvailablePerson) {
+        distributeTasks( availablePersons, tasks,
+                numberOfTasksPerAvailablePerson, false);
+    }
+
+    private void distributeTasks(List<Person> availablePersons, List<Task> tasks,
+                                 double numberOfTasksPerAvailablePerson, boolean forced) {
+        for (Task task : tasks) {
+            findAPersonToAssignATaskTo(availablePersons, numberOfTasksPerAvailablePerson, task, forced);
         }
     }
 
+
     private boolean findAPersonToAssignATaskTo(List<Person> availablePersons, double numberOfTasksPerAvailablePerson, Task task) {
+        return findAPersonToAssignATaskTo( availablePersons,  numberOfTasksPerAvailablePerson,  task,false);
+    }
+    private boolean findAPersonToAssignATaskTo(List<Person> availablePersons, double numberOfTasksPerAvailablePerson, Task task, boolean forced) {
         boolean foundMin = false;
         if (!availablePersons.isEmpty()) {
             Person minTasksPerson = availablePersons.get(0);
@@ -148,7 +158,7 @@ public class AssignTasksServices {
 
             for (Person person : availablePersons) {
                 int taskAssignNumber = person.getTasksAssignedNumber();
-                if ((taskAssignNumber < minTasksNumber) && (taskAssignNumber < numberOfTasksPerAvailablePerson)) {
+                if ((taskAssignNumber < minTasksNumber) && (forced || (taskAssignNumber < numberOfTasksPerAvailablePerson))) {
                     foundMin = true;
                     minTasksPerson = person;
                     minTasksNumber=taskAssignNumber;
@@ -180,7 +190,7 @@ public class AssignTasksServices {
 
     private List<Task> findTasksWithThisPerson(Person person) {
         List<Task> tasks = new ArrayList<>();
-        
+
         Bson filterPersonExists = Filters.exists("personAssigned");
         FindIterable<Task> tasksWithPersons = tasksDB.find(filterPersonExists);
 
