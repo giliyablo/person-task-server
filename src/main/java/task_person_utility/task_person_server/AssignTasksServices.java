@@ -45,12 +45,22 @@ public class AssignTasksServices {
 
     public boolean assignTasks(boolean forced) {
         boolean changed = false;
+        
         List<Person> availablePersons = getAvailablePersons();
         List<Task> notDoneTasks = getNotDoneTasks(true);
         if (!availablePersons.isEmpty() && !notDoneTasks.isEmpty()) {
             double numberOfTasksPerAvailablePerson = Math.floor((notDoneTasks.size()+0.0) / (availablePersons.size()+0.0));
+            
             notDoneTasks = getNotDoneTasks(forced);
             distributeTasks(availablePersons, notDoneTasks, numberOfTasksPerAvailablePerson);
+
+            Iterator<Person> notAvailablePersons = getAvailablePersons(false).iterator();
+            while (notAvailablePersons.hasNext()){
+                Person notAvailablePerson = notAvailablePersons.next();
+                List<Task> tasksForDist = findTasksWithThisPerson(notAvailablePerson);
+                distributeTasks(availablePersons, tasksForDist, numberOfTasksPerAvailablePerson);
+            }
+
             changed = true;
         }
 
@@ -68,8 +78,12 @@ public class AssignTasksServices {
     }
 
     private List<Person> getAvailablePersons() {
+        return getAvailablePersons(true);
+    }
+
+    private List<Person> getAvailablePersons(boolean available) {
         List<Person> availablePersons = new ArrayList<>();
-        Bson findAvailable = Filters.eq("availability", true);
+        Bson findAvailable = Filters.eq("availability", available);
         try (MongoCursor<Person> personCursor = personsDB.find(findAvailable).iterator()) {
             while (personCursor.hasNext()) {
                 Person currentPerson = personCursor.next();
@@ -125,7 +139,7 @@ public class AssignTasksServices {
             findAPersonToAssignATaskTo(availablePersons, numberOfTasksPerAvailablePerson, task);
         }
     }
-    
+
     private boolean findAPersonToAssignATaskTo(List<Person> availablePersons, double numberOfTasksPerAvailablePerson, Task task) {
         boolean foundMin = false;
         if (!availablePersons.isEmpty()) {
@@ -159,10 +173,17 @@ public class AssignTasksServices {
     }
 
     private void fixAPersonsTasksCount(Person person) {
+        List<Task> tasks = findTasksWithThisPerson(person);
+        person.setTasksAssignedNumber(tasks.size());
+        onlyUpdatePerson(person.getName(),person);
+    }
+
+    private List<Task> findTasksWithThisPerson(Person person) {
+        List<Task> tasks = new ArrayList<>();
+        
         Bson filterPersonExists = Filters.exists("personAssigned");
         FindIterable<Task> tasksWithPersons = tasksDB.find(filterPersonExists);
 
-        List<Task> tasks = new ArrayList<>();
         try (MongoCursor<Task> cursor = tasksWithPersons.iterator()) {
             while (cursor.hasNext()) {
                 Task currentTask = cursor.next();
@@ -173,13 +194,13 @@ public class AssignTasksServices {
                     getLogger().log(Level.INFO, String.format("%s is in DB%n", currentTask.getName()));
                 }
             }
-            person.setTasksAssignedNumber(tasks.size());
-            onlyUpdatePerson(person.getName(),person);
         } catch (MongoException me) {
             if (getLogger().isLoggable(Level.SEVERE)) {
                 getLogger().log(Level.SEVERE, "Unable to find any tasks in MongoDB due to an error: ", me);
             }
         }
+
+        return tasks;
     }
 
     private void logPerson(Person person) {
