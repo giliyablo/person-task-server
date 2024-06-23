@@ -53,14 +53,18 @@ public class AssignTasksServices {
             distributeTasks(availablePersons, notDoneTasks, numberOfTasksPerAvailablePerson);
             changed = true;
         }
-        if (!availablePersons.isEmpty()){
-            Iterator<Person> availablePersonsIterator = availablePersons.iterator();
-            while(availablePersonsIterator.hasNext()){
-                Person person = availablePersonsIterator.next();
-                fixAPersonsTasksCount(person);
-            }
-        }
+
+        fixAllPersonsTasksCount();
+
         return changed;
+    }
+
+    private void fixAllPersonsTasksCount() {
+        Iterator<Person> persons = personsDB.find().iterator();
+        while(persons.hasNext()){
+            Person person = persons.next();
+            fixAPersonsTasksCount(person);
+        }
     }
 
     private List<Person> getAvailablePersons() {
@@ -118,11 +122,11 @@ public class AssignTasksServices {
 
     private void distributeTasks(List<Person> availablePersons, List<Task> notDoneTasks, double numberOfTasksPerAvailablePerson) {
         for (Task task : notDoneTasks) {
-            assignTask(availablePersons, numberOfTasksPerAvailablePerson, task);
+            findAPersonToAssignATaskTo(availablePersons, numberOfTasksPerAvailablePerson, task);
         }
     }
-
-    private boolean assignTask(List<Person> availablePersons, double numberOfTasksPerAvailablePerson, Task task) {
+    
+    private boolean findAPersonToAssignATaskTo(List<Person> availablePersons, double numberOfTasksPerAvailablePerson, Task task) {
         boolean foundMin = false;
         if (!availablePersons.isEmpty()) {
             Person minTasksPerson = availablePersons.get(0);
@@ -137,17 +141,21 @@ public class AssignTasksServices {
                 }
             }
             if (foundMin) {
-                Person oldPerson = task.getPersonAssigned();
-                task.setPersonAssigned(minTasksPerson);
-                onlyUpdateTask(task.getName(),task);
-
-                if (oldPerson != null){
-                    fixAPersonsTasksCount(oldPerson);
-                }
-                fixAPersonsTasksCount(minTasksPerson);
+                assignTaskToPerson(task, minTasksPerson);
             }
         }
         return foundMin;
+    }
+
+    private void assignTaskToPerson(Task task, Person newPerson) {
+        Person oldPerson = task.getPersonAssigned();
+        task.setPersonAssigned(newPerson);
+        onlyUpdateTask(task.getName(),task);
+
+        if (oldPerson != null){
+            fixAPersonsTasksCount(oldPerson);
+        }
+        fixAPersonsTasksCount(newPerson);
     }
 
     private void fixAPersonsTasksCount(Person person) {
