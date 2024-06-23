@@ -44,12 +44,14 @@ public class AssignTasksServices {
     }
 
     public boolean assignTasks(boolean forced) {
+        boolean changed = false;
         List<Person> availablePersons = getAvailablePersons();
         List<Task> notDoneTasks = getNotDoneTasks(true);
         if (!availablePersons.isEmpty() && !notDoneTasks.isEmpty()) {
             double numberOfTasksPerAvailablePerson = Math.floor((notDoneTasks.size()+0.0) / (availablePersons.size()+0.0));
+            notDoneTasks = getNotDoneTasks(forced);
             distributeTasks(availablePersons, notDoneTasks, numberOfTasksPerAvailablePerson);
-            return true;
+            changed = true;
         }
         if (!availablePersons.isEmpty()){
             Iterator<Person> availablePersonsIterator = availablePersons.iterator();
@@ -58,7 +60,7 @@ public class AssignTasksServices {
                 fixAPersonsTasksCount(person);
             }
         }
-        return false;
+        return changed;
     }
 
     private List<Person> getAvailablePersons() {
@@ -128,7 +130,7 @@ public class AssignTasksServices {
 
             for (Person person : availablePersons) {
                 int taskAssignNumber = person.getTasksAssignedNumber();
-                if ((taskAssignNumber <= minTasksNumber) && (taskAssignNumber < numberOfTasksPerAvailablePerson)) {
+                if ((taskAssignNumber < minTasksNumber) && (taskAssignNumber < numberOfTasksPerAvailablePerson)) {
                     foundMin = true;
                     minTasksPerson = person;
                     minTasksNumber=taskAssignNumber;
