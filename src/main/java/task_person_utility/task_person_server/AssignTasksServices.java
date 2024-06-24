@@ -236,7 +236,8 @@ public class AssignTasksServices {
         Bson filter = Filters.eq("name", name);
         Bson update = Updates.combine(
                 Updates.set("name", person.getName()),
-                Updates.set("availability", person.getAvailability())
+                Updates.set("availability", person.getAvailability()),
+                Updates.set("tasksAssignedNumber", person.getTasksAssignedNumber())
         );
         FindOneAndUpdateOptions options = new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER);
         try {
