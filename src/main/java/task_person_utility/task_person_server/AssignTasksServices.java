@@ -109,10 +109,7 @@ public class AssignTasksServices {
                 if (forced || (currentTask.getPersonAssigned() == null)) {
                     notDoneTasks.add(currentTask);
                 }else{
-                    Person personForCheck = currentTask.getPersonAssigned();
-                    Bson personExists = Filters.eq("name",personForCheck.getName());
-                    FindIterable<Person> existingPersons = personsDB.find(personExists);
-                    MongoCursor<Person> iterator = existingPersons.iterator();
+                    Iterator<Person> iterator = getRealPersonFromTask(currentTask);
                     if (!iterator.hasNext()){
                         notDoneTasks.add(currentTask);
                     }else{
@@ -134,6 +131,13 @@ public class AssignTasksServices {
         return notDoneTasks;
     }
 
+    private Iterator<Person> getRealPersonFromTask(Task currentTask) {
+        Person personForCheck = currentTask.getPersonAssigned();
+        Bson personExists = Filters.eq("name",personForCheck.getName());
+        FindIterable<Person> existingPersons = personsDB.find(personExists);
+        return existingPersons.iterator();
+    }
+
     private void distributeTasks(List<Person> availablePersons, List<Task> tasks, double numberOfTasksPerAvailablePerson) {
         distributeTasks( availablePersons, tasks,
                 numberOfTasksPerAvailablePerson, false);
@@ -146,10 +150,6 @@ public class AssignTasksServices {
         }
     }
 
-
-    private boolean findAPersonToAssignATaskTo(List<Person> availablePersons, double numberOfTasksPerAvailablePerson, Task task) {
-        return findAPersonToAssignATaskTo( availablePersons,  numberOfTasksPerAvailablePerson,  task,false);
-    }
     private boolean findAPersonToAssignATaskTo(List<Person> availablePersons, double numberOfTasksPerAvailablePerson, Task task, boolean forced) {
         boolean foundMin = false;
         if (!availablePersons.isEmpty()) {
@@ -158,7 +158,7 @@ public class AssignTasksServices {
 
             for (Person person : availablePersons) {
                 int taskAssignNumber = person.getTasksAssignedNumber();
-                if ((taskAssignNumber < minTasksNumber) && (forced || (taskAssignNumber < numberOfTasksPerAvailablePerson))) {
+                if ((taskAssignNumber <= minTasksNumber) && (forced || (taskAssignNumber < numberOfTasksPerAvailablePerson))) {
                     foundMin = true;
                     minTasksPerson = person;
                     minTasksNumber=taskAssignNumber;
@@ -172,12 +172,12 @@ public class AssignTasksServices {
     }
 
     private void assignTaskToPerson(Task task, Person newPerson) {
-        Person oldPerson = task.getPersonAssigned();
+        Iterator<Person> oldPersonIterator = getRealPersonFromTask(task);
         task.setPersonAssigned(newPerson);
         onlyUpdateTask(task.getName(),task);
 
-        if (oldPerson != null){
-            fixAPersonsTasksCount(oldPerson);
+        if (oldPersonIterator.hasNext()){
+            fixAPersonsTasksCount(oldPersonIterator.next());
         }
         fixAPersonsTasksCount(newPerson);
     }
@@ -236,8 +236,7 @@ public class AssignTasksServices {
         Bson filter = Filters.eq("name", name);
         Bson update = Updates.combine(
                 Updates.set("name", person.getName()),
-                Updates.set("availability", person.getAvailability()),
-                Updates.set("tasksAssignedNumber", person.getTasksAssignedNumber())
+                Updates.set("availability", person.getAvailability())
         );
         FindOneAndUpdateOptions options = new FindOneAndUpdateOptions().returnDocument(ReturnDocument.AFTER);
         try {
